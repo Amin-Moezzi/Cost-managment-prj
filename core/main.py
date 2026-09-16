@@ -1,6 +1,8 @@
 
 from fastapi import FastAPI, status, HTTPException, Body
 from fastapi.responses import JSONResponse
+from schemas import CostResponseSchema, CostCreateSchema, CostUpdateSchema
+from typing import List
 
 app = FastAPI()
 
@@ -16,34 +18,42 @@ def root():
     )
 
 
-@app.post("/adding_cost/")
-def add_cost(
-        description: str = Body(),
-        amount: float = Body()
+@app.post(
+        "/adding_cost/",
+        response_model=CostResponseSchema,
+        status_code=status.HTTP_201_CREATED)
+
+def add_cost( cost : CostCreateSchema
 ):
     global new_id 
     
     new_cost = {
         "id": new_id,
-        "description": description,
-        "amount": amount
+        "description": cost.description,
+        "amount": cost.amount
     }
     
     costs_dict[new_id] = new_cost
     new_id += 1
 
-    return JSONResponse(content=new_cost, status_code=status.HTTP_201_CREATED)
+    return new_cost
 
 
-@app.get("/cost_names/")
+@app.get("/cost_names/",
+         response_model=List[CostResponseSchema],
+        status_code=status.HTTP_200_OK)
+
 def retriev_costs_list():
-    return JSONResponse(content=costs_dict, status_code=status.HTTP_200_OK)
+    return list(costs_dict.values())
 
 
-@app.get("/cost_names/{cost_id}")
+@app.get("/cost_names/{cost_id}",
+         response_model= CostResponseSchema,
+         status_code=status.HTTP_200_OK)
+
 def fetch_detailed_id(cost_id: int):
     if cost_id in costs_dict:
-        return JSONResponse(content=costs_dict[cost_id], status_code=status.HTTP_200_OK)
+        return costs_dict[cost_id]
     
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -51,17 +61,19 @@ def fetch_detailed_id(cost_id: int):
     )
 
 
-@app.put("/cost_names/{cost_id}/")
+@app.put("/cost_names/{cost_id}/",
+          response_model= CostResponseSchema,
+          status_code=status.HTTP_200_OK)
+
 def update_detailed_cost(
         cost_id: int,
-        cost_description: str = Body(),
-        cost_amount: float = Body()
+        cost : CostUpdateSchema
 ):
     if cost_id in costs_dict:
-        costs_dict[cost_id]["description"] = cost_description
-        costs_dict[cost_id]["amount"] = cost_amount
+        costs_dict[cost_id]["description"] = cost.description
+        costs_dict[cost_id]["amount"] = cost.amount
         
-        return JSONResponse(content=costs_dict[cost_id], status_code=status.HTTP_200_OK)
+        return costs_dict[cost_id]
     
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
