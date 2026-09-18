@@ -1,9 +1,8 @@
 
-from fastapi import FastAPI, status, HTTPException, Body
+from fastapi import FastAPI, status, HTTPException, Body, Query
 from fastapi.responses import JSONResponse
 from schemas import CostResponseSchema, CostCreateSchema, CostUpdateSchema
-from typing import List
-
+from typing import List, Optional
 app = FastAPI()
 
 costs_dict = {}
@@ -19,7 +18,7 @@ def root():
 
 
 @app.post(
-        "/adding_cost/",
+        "/costs",
         response_model=CostResponseSchema,
         status_code=status.HTTP_201_CREATED)
 
@@ -39,15 +38,34 @@ def add_cost( cost : CostCreateSchema
     return new_cost
 
 
-@app.get("/cost_names/",
+@app.get("/costs",
          response_model=List[CostResponseSchema],
         status_code=status.HTTP_200_OK)
 
-def retriev_costs_list():
-    return list(costs_dict.values())
+def retriev_costs_list(search : Optional[str] = Query(
+    default=None,
+    description=" Enter a keyword to filter costs by description",
+    alias="search",
+    max_length= 50
+    
+)):
+    # adding dictionary comprehension for search
+    if search:
+        filtered_costs = {
+            cost_key : cost_value for cost_key, cost_value in costs_dict.items()
+            if search.lower() in cost_value["description"].lower()
+
+        }
+
+        return JSONResponse(content=filtered_costs, status_code=status.HTTP_200_OK)
+    
+    return JSONResponse(content=costs_dict, status_code=status.HTTP_200_OK)
 
 
-@app.get("/cost_names/{cost_id}",
+
+
+
+@app.get("/costs/{cost_id}",
          response_model= CostResponseSchema,
          status_code=status.HTTP_200_OK)
 
@@ -61,7 +79,7 @@ def fetch_detailed_id(cost_id: int):
     )
 
 
-@app.put("/cost_names/{cost_id}/",
+@app.put("/costs/{cost_id}",
           response_model= CostResponseSchema,
           status_code=status.HTTP_200_OK)
 
@@ -81,7 +99,7 @@ def update_detailed_cost(
     )
 
 
-@app.delete("/cost_names/{cost_id}/")
+@app.delete("/costs/{cost_id}")
 def delete_detailed_cost(cost_id: int):
     if cost_id in costs_dict:
         del costs_dict[cost_id]
